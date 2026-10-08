@@ -3,7 +3,7 @@
  * design-studio-web — standalone HTML composer.
  *
  * Usage:
- *   npx tsx scripts/compose.ts inputs.json out/index.html
+ *   npx tsx scripts/compose.ts inputs.json out/index.html [--inline-svg]
  *
  * With Node 24 this file can also be run without tsx:
  *   node --experimental-strip-types scripts/compose.ts inputs.example.json example.html
@@ -88,6 +88,19 @@ function assetUrl(i: DesignStudioWebInputs, slot: string): string {
   const ext = i.imagery.strategy === 'placeholder' ? '.svg' : '.png';
   return assetBase(i) + slot + ext;
 }
+/** Embed the bundled placeholder plates so gallery srcdoc and local files share one bake. */
+async function inlineSvgPlates(html: string, inputs: DesignStudioWebInputs): Promise<string> {
+  if (inputs.imagery.strategy !== 'placeholder') throw new Error('--inline-svg requires placeholder imagery');
+  const slots = new Set([...inputs.work.projects.map(p => p.image_slot), inputs.studio.image_slot]);
+  for (const slot of slots) {
+    if (!/^[a-z0-9-]+$/.test(slot)) throw new Error(`Invalid placeholder slot: ${slot}`);
+    const svg = await readFile(resolve(ROOT, 'assets', `${slot}.svg`));
+    const src = `data:image/svg+xml;base64,${svg.toString('base64')}`;
+    html = html.replaceAll(`src='${attr(assetUrl(inputs, slot))}'`, `src='${src}'`);
+  }
+  return html;
+}
+
 function projectCard(p: Project, base: string, extName: string, ui: typeof DEFAULT_UI): string {
   return `<a class='project-card' href='${attr(p.href)}'${ext(p.href)} data-cursor='${attr(ui.cursor.view)}' data-tilt data-project='${attr(p.index)}'>
     <div class='project-media'><img src='${attr(base + p.image_slot + extName)}' alt='${attr(p.title + ' ' + ui.alt_project)}' loading='lazy' /></div>
@@ -666,14 +679,14 @@ function runtime(i: DesignStudioWebInputs, ui: typeof DEFAULT_UI): string {
 async function main(): Promise<void> {
   const inputPath = process.argv[2];
   const outputPath = process.argv[3];
-  if (!inputPath || !outputPath) throw new Error('Usage: compose.ts <inputs.json> <output.html>');
+  if (!inputPath || !outputPath) throw new Error('Usage: compose.ts <inputs.json> <output.html> [--inline-svg]');
   const inputAbs = resolve(process.cwd(), inputPath);
   const outputAbs = resolve(process.cwd(), outputPath);
   const inputs = JSON.parse(await readFile(inputAbs, 'utf8')) as DesignStudioWebInputs;
   const css = await readFile(resolve(ROOT, 'styles.css'), 'utf8');
   const ui = resolveUi(inputs);
 
-  const html = `<!doctype html>
+  let html = `<!doctype html>
 <html lang='${attr(inputs.brand.locale ?? 'en')}'>
 ${head(inputs, css)}
 <body>
@@ -694,6 +707,7 @@ ${renderFooter(inputs, ui)}
 ${runtime(inputs, ui)}
 </body>
 </html>`;
+  if (process.argv.includes('--inline-svg')) html = await inlineSvgPlates(html, inputs);
   await mkdir(dirname(outputAbs), { recursive: true });
   await writeFile(outputAbs, html.replace(/^[ \t]+$/gm, ''), 'utf8');
   console.log(`design-studio-web → ${outputAbs}`);

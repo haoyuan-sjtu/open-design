@@ -388,15 +388,16 @@ Two worked examples ship together for exactly this reason:
 `inputs.zh.example.json` (Simplified Chinese composer input; output to `out/index.html`) and
 `examples/inputs.form-shift.json` (English, baked to `examples/form-shift.html`).
 
-Each bake has its own inputs file because `imagery.assets_path` is written
-verbatim into the generated `src` attributes: it is output-relative, not
-package-relative. `example.html` sits beside `assets/`, so it takes
-`"./assets/"`; `examples/form-shift.html` sits one level down, so its inputs
-file takes `"../assets/"`. Composing the `examples/` bake from the root
-`inputs.example.json` silently rewrites all five plate URLs to
-`./assets/…`, which resolves to a directory that does not exist and leaves
-the rail with five broken images. Use the inputs file that belongs to the
-output directory.
+Rebuild the English gallery bake with its inputs and `--inline-svg`:
+
+```bash
+node scripts/compose.ts examples/inputs.form-shift.json examples/form-shift.html --inline-svg
+```
+
+This embeds the five bundled SVG plates as data URLs, so both local file opening
+and the gallery srcdoc iframe work without a base URL. Without the flag,
+`imagery.assets_path` remains output-relative and the matching assets must exist
+beside the exported HTML. A raw `../assets/` URL is not rewritten by the gallery.
 
 ## Workflow contract
 

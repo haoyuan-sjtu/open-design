@@ -95,3 +95,14 @@ test('reduced motion keeps navigation current and stops scheduling animation fra
   assert.ok(classes.has('motion-static'));
   assert.equal(queued, undefined);
 });
+
+test('baked gallery preview ships its generated scene masters', async () => {
+  const html = await fs.readFile(path.join(root, 'example.html'), 'utf8');
+  const images = [...new Set([...html.matchAll(/<img src="([^"#?]+)"/g)].map(m => m[1]))];
+  assert.equal(images.length, 3);
+  for (const src of images) {
+    const plate = await fs.readFile(path.resolve(root, src));
+    assert.ok(plate.length > 0, `Empty preview image: ${src}`);
+    assert.equal(plate.subarray(8, 12).toString(), 'WEBP', `Expected WebP: ${src}`);
+  }
+});

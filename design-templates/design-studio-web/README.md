@@ -26,7 +26,7 @@ npx tsx scripts/placeholder.ts ./out/assets/
 npx tsx scripts/compose.ts inputs.example.json out/index.html
 
 # 4. Rebuild the examples/ bake (note the different inputs file — see below).
-npx tsx scripts/compose.ts examples/inputs.form-shift.json examples/form-shift.html
+npx tsx scripts/compose.ts examples/inputs.form-shift.json examples/form-shift.html --inline-svg
 
 # 5. Open it.
 open example.html
@@ -49,13 +49,14 @@ node --experimental-strip-types scripts/compose.ts inputs.zh.example.json out/in
 Both describe FORM/SHIFT; the canonical preview retains the Aether layout, while
 the English example demonstrates the separate input-driven composer.
 
-`imagery.assets_path` is emitted verbatim into the generated `src` attributes,
-so it is **output-relative, not package-relative**. `example.html` sits beside
-`assets/` and takes `"./assets/"`; the bake inside `examples/` sits one level
-down and its inputs file takes `"../assets/"`. Composing `examples/form-shift.html`
-from the root `inputs.example.json` rewrites all five plate URLs to
-`./assets/…`, which resolves to a directory that does not exist — always pair an
-output with the inputs file that lives in the same directory.
+The English bake uses `--inline-svg` to embed all five bundled SVG plates as
+image data URLs. It opens directly from disk and works in the gallery's srcdoc
+iframe without a base URL or asset rewrite. Use this flag whenever composing a
+self-contained placeholder preview, including to a new output directory.
+
+Without `--inline-svg`, `imagery.assets_path` is emitted into `src` attributes
+relative to the output HTML. Prepare the corresponding assets beside the output;
+`../assets/` alone is not compatible with the gallery rewriter.
 `examples/aether-studio.html` is an earlier art-directed bake kept for reference.
 
 ## Homepage structure
